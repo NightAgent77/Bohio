@@ -1,0 +1,10 @@
+---
+description: Cine Bohio — read AGENTS.md and PROJECT.md; keep the project log current
+alwaysApply: true
+---
+
+# Cine Bohio
+
+Follow `AGENTS.md` at the repo root. At session start, read `PROJECT.md`.
+
+After meaningful edits, update `PROJECT.md` (state, decisions, next steps) so the next session is current.

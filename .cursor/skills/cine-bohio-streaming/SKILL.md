@@ -5,7 +5,7 @@ description: Architecture and UX for Cine Bohio, a short-film streaming website.
 
 # Cine Bohio Streaming
 
-Cine Bohio is a short-film streaming site. The landing page is already implemented from the Canva **Bohio** mock (`DAHUET3exrU`), including the glass masthead that shrinks on scroll to an evenly inset About / Contact / Location pill (`18.25rem` compact cluster; wordmark `max-width: 0`). Visual direction stays that design (`implement-user-design`), not a generic streaming-app look. Read `PROJECT.md` for current state. Keep `justify-content: end` on the nav pill so expand does not jump.
+Cine Bohío is a short-film platform and creative movement born in Puerto Rico. The landing page is implemented from the Canva **Bohio** mock (`DAHUET3exrU`): glass masthead that shrinks on scroll to an evenly inset About / Contact / Location pill (`18.25rem` compact cluster; wordmark `max-width: 0`). Homepage order is Hero → About → The Movement (`#concept`) → Our Roots (`#location`) → Contact. Visual direction stays that design (`implement-user-design`), not a generic streaming-app look. Read `PROJECT.md` for current state. Keep `justify-content: end` on the nav pill so expand does not jump.
 
 ## Product shape
 

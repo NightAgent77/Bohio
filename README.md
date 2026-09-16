@@ -1,6 +1,6 @@
 # Cine Bohio
 
-Short-film streaming site. Vite + React + TypeScript. The current build is a single landing page from the Canva **Bohio** mock (glass masthead that collapses on scroll to an evenly spaced About / Contact / Location pill, Clarify slogan, About / Contact / Location).
+Short-film streaming site. Vite + React + TypeScript. The current build is a single landing page from the Canva **Bohio** mock: glass masthead, Clarify slogan, About, The Movement, Our Roots, and Contact.
 
 ```bash
 npm install

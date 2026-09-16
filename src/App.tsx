@@ -8,18 +8,21 @@ const sloganLineTwo = ['visual', 'storytelling']
 
 const stills = [
   {
-    title: 'The trail',
-    copy: 'A path cut through rock and light.',
+    index: '01',
+    title: 'Discover',
+    copy: 'Find original short films and voices you may not encounter anywhere else.',
     position: '22% 82%',
   },
   {
-    title: 'The peak',
-    copy: 'Snow, distance, and the frame that holds them.',
+    index: '02',
+    title: 'Support',
+    copy: 'Rate films, save your favorites, and help meaningful work reach new audiences.',
     position: '68% 18%',
   },
   {
-    title: 'The ground',
-    copy: 'Texture first — then the story walking through it.',
+    index: '03',
+    title: 'Create',
+    copy: 'Share your perspective and inspire the next generation of filmmakers.',
     position: '48% 100%',
   },
 ] as const
@@ -232,26 +235,28 @@ function App() {
         <section className="panel" id="about">
           <div className="panel__inner glass">
             <p className="eyebrow">About</p>
-            <h2>A house for short films that stay with you.</h2>
+            <h2>
+              A home for short films.
+              <br />
+              A movement for creators.
+            </h2>
             <p>
-              Cine Bohio is a streaming home for shorts — work that treats
-              image, sound, and silence as the story, not the decoration. We
-              gather films that feel lived-in: landscapes you can almost walk,
-              faces held a beat longer, light that does the talking.
+              Cine Bohío is a platform where filmmakers can share their work and
+              audiences can discover stories worth remembering. Born in Puerto
+              Rico, we are building a community that encourages more people to
+              watch, support, and create cinema.
             </p>
-            <p>
-              The bohío is a dwelling. This one is built for watching closely.
-            </p>
+            <p className="panel__emphasis">Puerto Rican roots. Global stories.</p>
           </div>
         </section>
 
         <section className="panel panel--stills" id="concept" aria-labelledby="concept-title">
           <div className="panel__inner">
-            <p className="eyebrow">Concept</p>
-            <h2 id="concept-title">Still from the world</h2>
+            <p className="eyebrow">The Movement</p>
+            <h2 id="concept-title">Watch. Support. Create.</h2>
             <p className="lede">
-              Production stills from the same ground as the landing — trail,
-              peak, and the dust underfoot.
+              Cine Bohío brings audiences and filmmakers together through
+              short-form cinema.
             </p>
             <ul className="stills">
               {stills.map((still) => (
@@ -263,6 +268,9 @@ function App() {
                       style={{ objectPosition: still.position }}
                     />
                   </div>
+                  <p className="still__index" aria-hidden="true">
+                    {still.index}
+                  </p>
                   <h3>{still.title}</h3>
                   <p>{still.copy}</p>
                 </li>
@@ -271,29 +279,34 @@ function App() {
           </div>
         </section>
 
+        <section className="panel" id="location">
+          <div className="panel__inner glass location">
+            <p className="eyebrow">Our Roots</p>
+            <h2>
+              Born in Puerto Rico.
+              <br />
+              Open to the world.
+            </h2>
+            <p>
+              Cine Bohío begins by creating a dedicated home for Puerto Rican
+              short films and the people behind them. As the movement grows, we
+              will welcome stories from across the Caribbean and the world—without
+              losing sight of where it began.
+            </p>
+          </div>
+        </section>
+
         <section className="panel" id="contact">
           <div className="panel__inner glass contact">
             <div>
               <p className="eyebrow">Contact</p>
-              <h2>Write to the house.</h2>
+              <h2>Bring your story to the house.</h2>
               <p>
-                Festivals, filmmakers, and viewers — send a note. We read
-                everything that arrives.
+                Filmmakers, festivals, collaborators, and viewers—help us build
+                the next chapter of Cine Bohío.
               </p>
             </div>
             <ContactForm />
-          </div>
-        </section>
-
-        <section className="panel" id="location">
-          <div className="panel__inner glass location">
-            <p className="eyebrow">Location</p>
-            <h2>Wherever the frame is honest.</h2>
-            <p>
-              Cine Bohio is rooted in Caribbean storytelling and open to films
-              shot on any soil that still has weather in it — like the high
-              trail in the image behind this page.
-            </p>
           </div>
         </section>
       </main>

@@ -43,6 +43,7 @@ Cine Bohio is a short-film streaming site. This file is the operating manual for
 - Keep tokens in `src/index.css` (`:root`). Glass = backdrop-filter + translucent navy, not solid cards.
 - Compact nav: `.masthead.is-compact` after `scrollY > 72`, showing About / Contact / Location only. Wordmark and auth stay hidden until the hero is back in view — no hover expand.
 - Compact cluster width is `18.25rem` so the three labels sit evenly from the pill corners. Collapse the wordmark with `max-width: 0` and `overflow: hidden`. Keep `justify-content: end` and `0fr auto` — do not use compact `space-evenly` or `gap: 0` on the links (packs labels mid-morph).
+- Page flow: Hero → About → The Movement (`#concept`) → Our Roots (`#location`) → Contact. Nav labels stay About / Contact / Location.
 - Masthead morph stays off until `.is-ready` (fonts settled). Collapsing pieces use interpolable `min-width: 0`, not `min-content` / `max-content`.
 - Nav radii: `--nav-radius` / `--nav-chip-radius` (not a full capsule). Auth chrome is on `.auth-slot`.
 - Slogan uses Canva **Clarify**: per-word `filter: blur` → sharp, replay on every load. Copy lines: “Immerse yourself in true” / “visual storytelling”.

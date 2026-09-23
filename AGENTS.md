@@ -16,7 +16,8 @@ Cine Bohio is a short-film streaming site. This file is the operating manual for
 ## Stack
 
 - Vite 8 + React 19 + TypeScript in the **project root**
-- Single-page landing in `src/App.tsx` + `src/index.css` (no router yet)
+- Supabase Auth via `@supabase/supabase-js` (`src/lib/supabase.ts`). Keys in gitignored `.env.local`
+- Single-page app in `src/App.tsx` + `src/index.css` (no router yet): landing or signed-in dashboard, gated by the Supabase session
 - Dev: `npm run dev` → http://localhost:5173/
 - Check: `npm run build` (tsc + vite) and `npm run lint` (oxlint)
 - Type-only imports required (`verbatimModuleSyntax`): `import type { FormEvent } from 'react'`
@@ -33,7 +34,8 @@ Cine Bohio is a short-film streaming site. This file is the operating manual for
 
 - Visuals follow the Canva mock (glass, blur, type, slogan, compact nav).
 - Do not add Netflix-clone chrome, fake catalogs, or extra sections unless asked.
-- Sign Up / Log in are **UI only** — no backend. Do not fake successful auth.
+- Sign Up / Log in are real Supabase Auth on project **Cine-Bohio** (`lxdklufwsnjbdjmmjwip`). Do not replace them with a fake success message. New signups stay email-confirmed. A session replaces the landing with a Coming soon dashboard and a right-side profile widget. That widget opens a floating menu of placeholder items; Log out is the only working action. Sign up can reveal the password; Log in cannot.
+- The Supabase CLI saved on this machine is a different account. Do not point Cine Bohio at it. Never commit `.env.local`, service-role keys, or access tokens.
 - Native `<video>` when a player is added. No autoplay with sound.
 - Large media stays out of git when possible; never commit secrets.
 

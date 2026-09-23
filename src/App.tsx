@@ -1,10 +1,36 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import heroBlur from './assets/hero-blur.jpg'
 import landscape from './assets/landscape.jpg'
+import { supabase } from './lib/supabase'
 
 const sloganLineOne = ['Immerse', 'yourself', 'in', 'true']
 const sloganLineTwo = ['visual', 'storytelling']
+const dashTitle = ['Coming', 'soon'] as const
+const dashLine = ['The', 'house', 'is', 'still', 'being', 'built.'] as const
+const clarifyStep = 90
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+function ClarifyWords({
+  words,
+  from = 0,
+}: {
+  words: readonly string[]
+  from?: number
+}) {
+  return words.map((word, index) => (
+    <span
+      key={`${word}-${index}`}
+      className="slogan__word"
+      style={{ animationDelay: `${(from + index) * clarifyStep}ms` }}
+    >
+      {word}
+    </span>
+  ))
+}
 
 const stills = [
   {
@@ -29,11 +55,31 @@ const stills = [
 
 type AuthMode = 'signup' | 'login'
 
+function authFailure(message: string) {
+  const lower = message.toLowerCase()
+  if (lower.includes('email not confirmed')) {
+    return 'Confirm your email first, then log in.'
+  }
+  if (lower.includes('invalid login credentials')) {
+    return 'That email and password don’t match.'
+  }
+  return message
+}
+
 function App() {
   const [compact, setCompact] = useState(() => window.scrollY > 72)
   const [navReady, setNavReady] = useState(false)
   const [auth, setAuth] = useState<AuthMode | null>(null)
   const [authNote, setAuthNote] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [accountEmail, setAccountEmail] = useState<string | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [landingMounted, setLandingMounted] = useState(false)
+  const [dashMounted, setDashMounted] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const sawLanding = useRef(false)
+  const onDashboard = useRef(false)
 
   useEffect(() => {
     const onScroll = () => {
@@ -113,21 +159,135 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [auth])
 
-  const onAuthSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    let ignore = false
+    void supabase.auth.getSession().then(({ data }) => {
+      if (ignore) return
+      setAccountEmail(data.session?.user.email ?? null)
+      setAuthReady(true)
+    })
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAccountEmail(session?.user.email ?? null)
+      setAuthReady(true)
+    })
+    return () => {
+      ignore = true
+      data.subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!authReady) return
+
+    if (!accountEmail) {
+      onDashboard.current = false
+      setLeaving(false)
+      setDashMounted(false)
+      setLandingMounted(true)
+      sawLanding.current = true
+      return
+    }
+
+    if (onDashboard.current) return
+
+    const finish = () => {
+      onDashboard.current = true
+      setLandingMounted(false)
+      setLeaving(false)
+      setDashMounted(true)
+    }
+
+    if (!sawLanding.current || prefersReducedMotion()) {
+      finish()
+      return
+    }
+
+    setLeaving(true)
+    const showDash = window.setTimeout(() => {
+      setDashMounted(true)
+      window.scrollTo(0, 0)
+    }, 240)
+    const hideLanding = window.setTimeout(finish, 640)
+    return () => {
+      window.clearTimeout(showDash)
+      window.clearTimeout(hideLanding)
+    }
+  }, [accountEmail, authReady])
+
+  useEffect(() => {
+    if (!leaving) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [leaving])
+
+  const openAuth = (mode: AuthMode) => {
+    setAuthNote('')
+    setAuthError('')
+    setAuth(mode)
+  }
+
+  const onSignOut = () => {
+    void supabase.auth.signOut()
+  }
+
+  const onAuthSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setAuthNote(
-      auth === 'signup'
-        ? 'Accounts will open with the catalog. We’ll keep this seat for you.'
-        : 'Login will connect when the catalog goes live.',
+    if (!auth || authBusy) return
+    const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') ?? '').trim()
+    const password = String(form.get('password') ?? '')
+    setAuthBusy(true)
+    setAuthError('')
+    setAuthNote('')
+
+    if (auth === 'signup') {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      })
+      setAuthBusy(false)
+      if (error) {
+        setAuthError(authFailure(error.message))
+        return
+      }
+      if (data.session) {
+        setAuth(null)
+        return
+      }
+      setAuthNote('Check your email to confirm this account, then log in.')
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    setAuthBusy(false)
+    if (error) {
+      setAuthError(authFailure(error.message))
+      return
+    }
+    setAuth(null)
+  }
+
+  if (!authReady) {
+    return (
+      <div className="page">
+        <Backdrop />
+      </div>
     )
   }
 
   return (
     <div className="page">
-      <div className="backdrop" aria-hidden="true">
-        <img src={heroBlur} alt="" />
-      </div>
+      <Backdrop />
 
+      {landingMounted ? (
+        <div
+          className={`landing${leaving ? ' is-leaving' : ''}`}
+          inert={leaving || undefined}
+        >
       <a className="skip" href="#about">
         Skip to content
       </a>
@@ -162,20 +322,14 @@ function App() {
               <button
                 type="button"
                 className="btn btn--solid"
-                onClick={() => {
-                  setAuthNote('')
-                  setAuth('signup')
-                }}
+                onClick={() => openAuth('signup')}
               >
                 Sign Up
               </button>
               <button
                 type="button"
                 className="btn btn--glass"
-                onClick={() => {
-                  setAuthNote('')
-                  setAuth('login')
-                }}
+                onClick={() => openAuth('login')}
               >
                 Log in
               </button>
@@ -188,28 +342,13 @@ function App() {
         <section className="hero" id="top" aria-label="Cine Bohio">
           <h1 className="slogan">
             <span className="slogan__line">
-              {sloganLineOne.map((word, index) => (
-                <span
-                  key={word}
-                  className="slogan__word"
-                  style={{ animationDelay: `${index * 90}ms` }}
-                >
-                  {word}
-                </span>
-              ))}
+              <ClarifyWords words={sloganLineOne} />
             </span>
             <span className="slogan__line">
-              {sloganLineTwo.map((word, index) => (
-                <span
-                  key={word}
-                  className="slogan__word"
-                  style={{
-                    animationDelay: `${(sloganLineOne.length + index) * 90}ms`,
-                  }}
-                >
-                  {word}
-                </span>
-              ))}
+              <ClarifyWords
+                words={sloganLineTwo}
+                from={sloganLineOne.length}
+              />
             </span>
           </h1>
 
@@ -310,15 +449,24 @@ function App() {
           </div>
         </section>
       </main>
+        </div>
+      ) : null}
+
+      {dashMounted && accountEmail ? (
+        <Dashboard email={accountEmail} onSignOut={onSignOut} />
+      ) : null}
 
       {auth ? (
         <AuthDialog
           mode={auth}
           note={authNote}
+          error={authError}
+          busy={authBusy}
           onClose={() => setAuth(null)}
           onSubmit={onAuthSubmit}
           onSwitch={(mode) => {
             setAuthNote('')
+            setAuthError('')
             setAuth(mode)
           }}
         />
@@ -365,21 +513,74 @@ function ContactForm() {
   )
 }
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+    </svg>
+  )
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M3 4.5 20 19"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.2 6.4A10 10 0 0 1 12 6c6.5 0 10 6 10 6a16 16 0 0 1-3.2 3.7M6.1 8.2C3.7 9.8 2 12 2 12s3.5 6 10 6a9.6 9.6 0 0 0 3.4-.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 function AuthDialog({
   mode,
   note,
+  error,
+  busy,
   onClose,
   onSubmit,
   onSwitch,
 }: {
   mode: AuthMode
   note: string
+  error: string
+  busy: boolean
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onSwitch: (mode: AuthMode) => void
 }) {
   const id = useId()
+  const emailRef = useRef<HTMLInputElement>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const title = mode === 'signup' ? 'Sign up' : 'Log in'
+
+  useEffect(() => {
+    setShowPassword(false)
+    emailRef.current?.focus()
+  }, [mode])
 
   return (
     <div className="dialog-back" role="presentation" onClick={onClose}>
@@ -392,30 +593,56 @@ function AuthDialog({
       >
         <h2 id={`${id}-title`}>{title}</h2>
         <p>
-          Catalog access is coming. Leave your email and we’ll keep the door
-          marked.
+          {mode === 'signup'
+            ? 'Create an account with your email. Confirm the message we send before the seat is open.'
+            : 'Log in with the email and password for your account.'}
         </p>
         <form className="form" onSubmit={onSubmit}>
           <label htmlFor={`${id}-email`}>Email</label>
           <input
+            ref={emailRef}
             id={`${id}-email`}
             name="email"
             type="email"
             autoComplete="email"
             required
+            disabled={busy}
+            aria-invalid={error ? true : undefined}
           />
           <label htmlFor={`${id}-password`}>Password</label>
-          <input
-            id={`${id}-password`}
-            name="password"
-            type="password"
-            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            required
-          />
-          <button className="btn btn--solid" type="submit">
-            {title}
+          <div className="password-field">
+            <input
+              id={`${id}-password`}
+              name="password"
+              type={mode === 'signup' && showPassword ? 'text' : 'password'}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              minLength={6}
+              required
+              disabled={busy}
+              aria-invalid={error ? true : undefined}
+            />
+            {mode === 'signup' ? (
+              <button
+                type="button"
+                className="password-toggle"
+                aria-pressed={showPassword}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                disabled={busy}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            ) : null}
+          </div>
+          <button className="btn btn--solid" type="submit" disabled={busy}>
+            {busy ? 'Please wait' : title}
           </button>
         </form>
+        {error ? (
+          <p className="form-note" role="alert">
+            {error}
+          </p>
+        ) : null}
         {note ? (
           <p className="form-note" role="status">
             {note}
@@ -423,11 +650,11 @@ function AuthDialog({
         ) : null}
         <p className="dialog__switch">
           {mode === 'signup' ? (
-            <button type="button" onClick={() => onSwitch('login')}>
+            <button type="button" onClick={() => onSwitch('login')} disabled={busy}>
               Have a seat already? Log in
             </button>
           ) : (
-            <button type="button" onClick={() => onSwitch('signup')}>
+            <button type="button" onClick={() => onSwitch('signup')} disabled={busy}>
               New here? Sign up
             </button>
           )}
@@ -436,6 +663,151 @@ function AuthDialog({
           Close
         </button>
       </div>
+    </div>
+  )
+}
+
+function Backdrop() {
+  return (
+    <div className="backdrop" aria-hidden="true">
+      <img src={heroBlur} alt="" />
+    </div>
+  )
+}
+
+const profileItems = ['Profile', 'Watchlist', 'Settings', 'Notifications'] as const
+
+function initialsFromEmail(email: string) {
+  const local = email.split('@')[0] ?? email
+  const parts = local.split(/[._-]+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
+  }
+  return local.slice(0, 2).toUpperCase()
+}
+
+function Dashboard({
+  email,
+  onSignOut,
+}: {
+  email: string
+  onSignOut: () => void
+}) {
+  const [chromeSettled, setChromeSettled] = useState(false)
+
+  return (
+    <div className="dash-view">
+      <a className="skip" href="#dash-main">
+        Skip to content
+      </a>
+      <header className="dash-masthead">
+        <div
+          className={`dash-bar clarify-ui${chromeSettled ? ' is-settled' : ''}`}
+          onAnimationEnd={(event) => {
+            if (event.target === event.currentTarget) setChromeSettled(true)
+          }}
+        >
+          <p className="wordmark dash-wordmark">Cine Bohio</p>
+          <ProfileMenu email={email} onSignOut={onSignOut} />
+        </div>
+      </header>
+      <main className="dash-main" id="dash-main">
+        <h1 className="slogan">
+          <span className="slogan__line">
+            <ClarifyWords words={dashTitle} from={2} />
+          </span>
+        </h1>
+        <p className="dash-line">
+          <ClarifyWords words={dashLine} from={4} />
+        </p>
+      </main>
+    </div>
+  )
+}
+
+function ProfileMenu({
+  email,
+  onSignOut,
+}: {
+  email: string
+  onSignOut: () => void
+}) {
+  const menuId = useId()
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+
+    const onPointer = (event: PointerEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) return
+      setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+
+    const listen = window.setTimeout(() => {
+      window.addEventListener('pointerdown', onPointer)
+    }, 0)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.clearTimeout(listen)
+      window.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="profile" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="profile__trigger"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={menuId}
+        onClick={(event) => {
+          event.stopPropagation()
+          setOpen((value) => !value)
+        }}
+      >
+        <span className="profile__avatar" aria-hidden="true">
+          {initialsFromEmail(email)}
+        </span>
+        <span className="profile__meta">
+          <span className="profile__label">Your account</span>
+          <span className="profile__email">{email}</span>
+        </span>
+      </button>
+      {open ? (
+        <div className="profile__menu glass" id={menuId} role="menu" aria-label="Account">
+          {profileItems.map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="menuitem"
+              className="profile__item"
+              disabled
+              title="Coming soon"
+            >
+              {item}
+            </button>
+          ))}
+          <button
+            type="button"
+            role="menuitem"
+            className="profile__item profile__item--out"
+            onClick={onSignOut}
+          >
+            Log out
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

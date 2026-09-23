@@ -16,11 +16,11 @@ Typical surfaces (add only when the design or user asks):
 - Player (watch)
 - Optional: about, contact, festival/press
 
-Do not add accounts, recommendations carousels, or Netflix-clone chrome unless requested.
+Email/password accounts already exist through Supabase Auth (`src/lib/supabase.ts`, project `Cine-Bohio`). A session enters a Coming soon dashboard with a profile menu; Log out is the working account action. Do not remove auth or fake a successful login. Do not add recommendations carousels or Netflix-clone chrome unless requested.
 
 ## Architecture
 
-Current app: Vite + React + TypeScript in the project root.
+Current app: Vite + React + TypeScript in the project root. Auth client: `src/lib/supabase.ts`. Read `PROJECT.md` before changing accounts.
 
 - Routes and pages live under `src/` once routing is added. Prefer React Router when multiple screens exist.
 - Keep film data behind a small module (`src/data/` or later an API). Do not hardcode catalog markup in ten components.

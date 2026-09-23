@@ -160,6 +160,11 @@ function App() {
   }, [auth])
 
   useEffect(() => {
+    if (!supabase) {
+      setAuthReady(true)
+      return
+    }
+
     let ignore = false
     void supabase.auth.getSession().then(({ data }) => {
       if (ignore) return
@@ -230,12 +235,16 @@ function App() {
   }
 
   const onSignOut = () => {
-    void supabase.auth.signOut()
+    void supabase?.auth.signOut()
   }
 
   const onAuthSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!auth || authBusy) return
+    if (!supabase) {
+      setAuthError('Accounts are not connected on this copy of the site.')
+      return
+    }
     const form = new FormData(event.currentTarget)
     const email = String(form.get('email') ?? '').trim()
     const password = String(form.get('password') ?? '')

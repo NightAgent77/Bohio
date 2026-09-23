@@ -32,7 +32,8 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 - New signups must confirm email (`mailer_autoconfirm` is false). No custom SMTP. The built-in mailer only reaches organization members and returns “email rate limit exceeded” after about 2 emails per hour
 - Accounts live in Supabase Auth (`auth.users`) only. There is no profiles table
 - Confirmed admin login: `chilaxer77@gmail.com`, `app_metadata.role` = `admin`. Password is not in the repo. This account enters the same Coming soon dashboard as any other user
-- Auth site URL and redirect allow list: `http://localhost:5173` and `http://127.0.0.1:5173/**`
+- Auth site URL and redirect allow list: still `http://localhost:5173` and `http://127.0.0.1:5173/**`. Add `https://cinebohio.vercel.app` and `https://cinebohio.vercel.app/**` so confirmation / reset links from the live site work
+- Live site: [cinebohio.vercel.app](https://cinebohio.vercel.app) on Vercel project `cinebohio` (team `nightagent77s-projects`). Production Config has `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Redeployed 23 Sep 2026 without build cache; landing and Sign Up / Log in reach Supabase. Preview / Development env vars are not set. Live production is still git `dfb9b11` — later local dashboard/transition work is not on that deploy unless it is committed and pushed
 
 ### Key files
 
@@ -57,6 +58,7 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 8. **Auth (23 Sep 2026)** — Connected the separate Cine Bohio Supabase account (not the CLI’s other login). Project `Cine-Bohio` in `us-west-2`. Sign up, log in, and sign out use `@supabase/supabase-js`. Confirmation stays on. Sign-up password can be shown with the eye control on the right. Admin login is `chilaxer77@gmail.com`, already confirmed, because the built-in mailer rate-limits confirmation email.
 9. **Signed-in dashboard (23 Sep 2026)** — A session now enters a Coming soon screen instead of staying on the landing. Profile widget on the right; floating account menu with placeholder items and a working Log out. No router yet — the view is gated by `supabase.auth` session.
 10. **Enter transition (23 Sep 2026)** — Landing chrome dissolves with a reverse Clarify, then the dashboard bar and copy use the same blur-to-sharp stagger as the hero slogan (`clarify` / 90ms). Reduced motion skips the leave delay and the blur.
+11. **Live Vercel env (23 Sep 2026)** — Production was a navy blank because the Vite build had no `VITE_SUPABASE_*` (`.env.local` is gitignored) and the client threw on import. Keys were added in Vercel as Production **Config** (Secret rejects `VITE_` names). Redeployed `dfb9b11` without cache; the landing paints and Log in talks to project `lxdklufwsnjbdjmmjwip`. Local `src/lib/supabase.ts` now returns `null` instead of throwing if keys are missing — that guard is not necessarily on the live commit.
 
 ## Decisions (don’t silently reverse)
 
@@ -79,7 +81,9 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 - Drop in a full-resolution `DSCF9057.jpg` to replace the upscaled thumbnail
 - Catalog of shorts, film detail, player (native `<video>`)
 - Custom SMTP so confirmation mail reaches people outside the Supabase organization; until then, signup tells the visitor to check email and login stays closed until that link is opened
-- A deployed site URL in the Supabase auth redirect list when the app leaves localhost
+- Add `https://cinebohio.vercel.app` and `https://cinebohio.vercel.app/**` to the Supabase auth redirect allow list
+- Optionally set the same `VITE_SUPABASE_*` Config vars for Vercel Preview / Development
+- Commit/push local dashboard transition + optional-supabase guard if that work should go live (production is still `dfb9b11`)
 - Routing when the dashboard is more than one screen (React Router)
 - Any further Canva frames beyond this landing
 
@@ -92,5 +96,6 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 - First paint will tween `width` / `grid-template-columns` if transitions are enabled too early — keep `.masthead:not(.is-ready)` at `transition: none`
 - Auth/wordmark `min-width: min-content` or `max-content` is not interpolable; on expand the cluster stays compact while auth pops to full width and the links jump left
 - Compact cluster width must fit labels + `padding-inline: 1.45rem` + border (`18.25rem`). Tightening it to `17.55rem` made About hug the left edge. Keep `justify-content: end` and `grid-template-columns: 0fr auto` so expand does not jump. Do not use compact `space-evenly` / `gap: 0` on `.nav-links` — the words collapse into one string mid-morph.
-- `.env.local` is required. `src/lib/supabase.ts` throws if `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is missing. `.gitignore` ignores `.env` and `*.local`.
+- `.env.local` is required for working Sign up / Log in. Vite bakes `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in at build time. They are not in git. A live host that builds without those variables used to crash to a navy screen. Production now has them as Vercel Config; changing them needs a rebuild (not a cache-only redeploy). On the local tree, missing keys no longer throw — the landing paints and auth stays disconnected. `.gitignore` ignores `.env` and `*.local`. Vercel Secret type rejects `VITE_` keys; use Config.
+- A deployed site URL must also be added to the Supabase auth redirect list.
 - A personal access token pasted in chat on 23 Sep 2026 can manage the Cine Bohio account. Treat it as exposed and do not reuse it. Ask the owner to revoke it at Supabase account tokens if that has not happened.

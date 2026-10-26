@@ -1,6 +1,6 @@
 # Cine Bohio — project log
 
-Handoff for new agent sessions. Operating rules live in [AGENTS.md](AGENTS.md). Last updated 23 Sep 2026.
+Handoff for new agent sessions. Operating rules live in [AGENTS.md](AGENTS.md). Last updated 26 Oct 2026.
 
 ## What this is
 
@@ -28,7 +28,7 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 - Scroll cue (three dots + chevron) → About
 - About (platform + movement), The Movement stills (Discover / Support / Create), Our Roots (`#location`), Contact form (client-side thank-you)
 - Sign Up / Log in glass dialogs call Supabase Auth (`src/lib/supabase.ts`). Sign up has a show/hide control on the right of the password field; Log in stays masked
-- A confirmed session leaves the landing and opens a Coming soon dashboard. Login from the landing plays a reverse-Clarify dissolve, then the dashboard bar and “Coming soon” line enter with the same per-word Clarify stagger as the hero slogan. Refreshing while signed in still plays that intro. The right-side profile widget shows initials plus email. Clicking it opens a floating menu: Profile, Watchlist, Settings, and Notifications are placeholders; Log out signs out through Supabase and returns to the landing
+- A confirmed session leaves the landing and opens the Coming soon view. Login from the landing plays a reverse-Clarify dissolve, then the dashboard bar and “Coming soon” line enter with the same per-word Clarify stagger as the hero slogan. Refreshing while signed in still plays that intro. The dashboard bar centers Explore, Favorites, and Coming soon between the wordmark and the profile widget. Each opens its own view. Explore is a layout shelf: a narrow Continue watching widget, a wider Trending widget beside it, and a Watch next row. Frames are a flat color, not photos. The shelf fills the first view. Continue watching and Trending share the upper portion and stay a little shorter than Watch next, which fills the rest. Favorites stays empty until films can be saved. View Profile shows the account email. Settings shows that same email. Changing views blurs the current screen out, then clarifies the next one in. Reduced motion swaps immediately. Hover and the current view use a light wash on those controls. On a narrow screen the three labels wrap onto a second row, still centered, and the profile menu opens beneath that bar. The right-side profile widget shows initials plus email. Clicking it opens a floating menu: View Profile, then Settings, then Sign out on the lower end. Sign out signs out through Supabase and returns to the landing
 - New signups must confirm email (`mailer_autoconfirm` is false). No custom SMTP. The built-in mailer only reaches organization members and returns “email rate limit exceeded” after about 2 emails per hour
 - Accounts live in Supabase Auth (`auth.users`) only. There is no profiles table
 - Confirmed admin login: `chilaxer77@gmail.com`, `app_metadata.role` = `admin`. Password is not in the repo. This account enters the same Coming soon dashboard as any other user
@@ -59,6 +59,9 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 9. **Signed-in dashboard (23 Sep 2026)** — A session now enters a Coming soon screen instead of staying on the landing. Profile widget on the right; floating account menu with placeholder items and a working Log out. No router yet — the view is gated by `supabase.auth` session.
 10. **Enter transition (23 Sep 2026)** — Landing chrome dissolves with a reverse Clarify, then the dashboard bar and copy use the same blur-to-sharp stagger as the hero slogan (`clarify` / 90ms). Reduced motion skips the leave delay and the blur.
 11. **Live Vercel env (23 Sep 2026)** — Production was a navy blank because the Vite build had no `VITE_SUPABASE_*` (`.env.local` is gitignored) and the client threw on import. Keys were added in Vercel as Production **Config** (Secret rejects `VITE_` names). Redeployed `dfb9b11` without cache; the landing paints and Log in talks to project `lxdklufwsnjbdjmmjwip`. Local `src/lib/supabase.ts` now returns `null` instead of throwing if keys are missing — that guard is not necessarily on the live commit.
+12. **Dashboard header (26 Oct 2026)** — Signed-in bar is a three-column grid: wordmark, centered Explore / Favorites / Coming soon, profile. Profile menu is View Profile, Settings, and Sign out.
+13. **Dashboard views (26 Oct 2026)** — Those five controls each open a view. Entry stays Coming soon. Explore and Favorites do not invent a catalog. View Profile and Settings show the signed-in email. View changes use Clarify out, then Clarify in. Hover and the current item share the login wash.
+14. **Explore shelf (26 Oct 2026)** — Explore shows three layout widgets under the header: Continue watching (narrow), Trending (wider, beside it), and Watch next (four slots). Frames are a flat color, not stills, so the shelf shape stays readable. The shelf fills the first view: the top pair is a little shorter than Watch next, and both stay on screen. Add height only when more sections need the page to scroll.
 
 ## Decisions (don’t silently reverse)
 
@@ -73,7 +76,7 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 - Compact labels need equal insets: collapse the wordmark with `max-width: 0` and `overflow: hidden`, and keep the compact cluster wide enough for the three labels plus padding (`18.25rem`). A tighter width (`17.55rem`) overflowed left because `justify-content: end` keeps the morph from jumping.
 - Manrope loads with `display=optional` plus a metric-matched `'Manrope Fallback'` so a late font swap does not shove the labels.
 - Brand positioning lives in the brief: platform + movement, Puerto Rican origin, global future. Homepage copy stays short; do not add a fake catalog, live ratings, or submissions. Nav still says Location even when the section eyebrow is Our Roots. Accounts are real Supabase auth.
-- A live session enters the Coming soon dashboard. Do not keep the signed-in user on the marketing landing, and do not put Sign out back on the landing masthead. Log out lives in the profile menu. Placeholder menu items stay inert until those screens exist.
+- A live session enters the Coming soon view. Do not keep the signed-in user on the marketing landing, and do not put Sign out back on the landing masthead. Sign out lives at the bottom of the profile menu. Explore, Favorites, Coming soon, View Profile, and Settings are real views. Explore’s widgets are a layout preview: do not invent film titles or a playable catalog there. Favorites stays empty until films can be saved. In-dashboard view changes use the Clarify blur (out, then in), not a separate fade or slide.
 - Landing → dashboard uses the slogan’s Clarify motion (blur out, then blur in). Do not replace that with a generic fade or a different easing language.
 
 ## Open / next
@@ -84,7 +87,7 @@ Owner designs in **Canva**. Cursor is connected to that Canva account (`user-can
 - Add `https://cinebohio.vercel.app` and `https://cinebohio.vercel.app/**` to the Supabase auth redirect allow list
 - Optionally set the same `VITE_SUPABASE_*` Config vars for Vercel Preview / Development
 - Commit/push local dashboard transition + optional-supabase guard if that work should go live (production is still `dfb9b11`)
-- Routing when the dashboard is more than one screen (React Router)
+- URL routing if these dashboard views should be shareable links (React Router). The views themselves swap inside the signed-in screen
 - Any further Canva frames beyond this landing
 
 ## Pitfalls

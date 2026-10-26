@@ -6,8 +6,44 @@ import { supabase } from './lib/supabase'
 
 const sloganLineOne = ['Immerse', 'yourself', 'in', 'true']
 const sloganLineTwo = ['visual', 'storytelling']
-const dashTitle = ['Coming', 'soon'] as const
-const dashLine = ['The', 'house', 'is', 'still', 'being', 'built.'] as const
+const libraryNav = [
+  { id: 'explore', label: 'Explore' },
+  { id: 'favorites', label: 'Favorites' },
+  { id: 'soon', label: 'Coming soon' },
+] as const
+const accountMenu = [
+  { id: 'profile', label: 'View Profile' },
+  { id: 'settings', label: 'Settings' },
+] as const
+
+type DashView = (typeof libraryNav)[number]['id'] | (typeof accountMenu)[number]['id']
+type DashMotion = 'settle' | 'out' | 'in'
+
+const viewCopy: Record<
+  DashView,
+  { title: readonly string[]; line: readonly string[] | null }
+> = {
+  explore: {
+    title: ['Explore'],
+    line: ['Short', 'films', 'will', 'gather', 'here.'],
+  },
+  favorites: {
+    title: ['Favorites'],
+    line: ['Films', 'you', 'save', 'will', 'wait', 'here.'],
+  },
+  soon: {
+    title: ['Coming', 'soon'],
+    line: ['The', 'house', 'is', 'still', 'being', 'built.'],
+  },
+  profile: {
+    title: ['View', 'Profile'],
+    line: null,
+  },
+  settings: {
+    title: ['Settings'],
+    line: null,
+  },
+}
 const clarifyStep = 90
 
 function prefersReducedMotion() {
@@ -684,8 +720,6 @@ function Backdrop() {
   )
 }
 
-const profileItems = ['Profile', 'Watchlist', 'Settings', 'Notifications'] as const
-
 function initialsFromEmail(email: string) {
   const local = email.split('@')[0] ?? email
   const parts = local.split(/[._-]+/).filter(Boolean)
@@ -703,6 +737,39 @@ function Dashboard({
   onSignOut: () => void
 }) {
   const [chromeSettled, setChromeSettled] = useState(false)
+  const [view, setView] = useState<DashView>('soon')
+  const [shown, setShown] = useState<DashView>('soon')
+  const [motion, setMotion] = useState<DashMotion>('settle')
+  const viewRef = useRef<DashView>('soon')
+  const leaveTimer = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimer.current !== null) window.clearTimeout(leaveTimer.current)
+    }
+  }, [])
+
+  const openView = (next: DashView) => {
+    if (next === view) return
+    viewRef.current = next
+    setView(next)
+    if (prefersReducedMotion()) {
+      if (leaveTimer.current !== null) {
+        window.clearTimeout(leaveTimer.current)
+        leaveTimer.current = null
+      }
+      setShown(next)
+      setMotion('settle')
+      return
+    }
+    if (leaveTimer.current !== null) return
+    setMotion('out')
+    leaveTimer.current = window.setTimeout(() => {
+      leaveTimer.current = null
+      setShown(viewRef.current)
+      setMotion('in')
+    }, 500)
+  }
 
   return (
     <div className="dash-view">
@@ -717,28 +784,151 @@ function Dashboard({
           }}
         >
           <p className="wordmark dash-wordmark">Cine Bohio</p>
-          <ProfileMenu email={email} onSignOut={onSignOut} />
+          <nav className="dash-nav" aria-label="Library">
+            <ul className="dash-nav__links">
+              {libraryNav.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="dash-nav__item"
+                    aria-current={view === item.id ? 'page' : undefined}
+                    onClick={() => openView(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <ProfileMenu
+            email={email}
+            view={view}
+            onOpen={openView}
+            onSignOut={onSignOut}
+          />
         </div>
       </header>
-      <main className="dash-main" id="dash-main">
-        <h1 className="slogan">
-          <span className="slogan__line">
-            <ClarifyWords words={dashTitle} from={2} />
-          </span>
-        </h1>
-        <p className="dash-line">
-          <ClarifyWords words={dashLine} from={4} />
-        </p>
+      <main
+        className={`dash-main${shown === 'explore' ? ' dash-main--explore' : ''}`}
+        id="dash-main"
+      >
+        <div
+          className={`dash-stage${shown === 'explore' ? ' dash-stage--shelf' : ''}${motion === 'out' ? ' is-leaving' : ''}${motion === 'in' ? ' is-entering' : ''}`}
+          aria-live="polite"
+        >
+          <DashStage id={shown} motion={motion} email={email} />
+        </div>
       </main>
+    </div>
+  )
+}
+
+function DashStage({
+  id,
+  motion,
+  email,
+}: {
+  id: DashView
+  motion: DashMotion
+  email: string
+}) {
+  const copy = viewCopy[id]
+  const intro = motion === 'settle'
+
+  if (id === 'explore') return <ExploreShelf />
+
+  return (
+    <>
+      <h1 className="slogan">
+        <span className="slogan__line">
+          {intro ? <ClarifyWords words={copy.title} from={2} /> : copy.title.join(' ')}
+        </span>
+      </h1>
+      {copy.line ? (
+        <p className="dash-line">
+          {intro ? (
+            <ClarifyWords words={copy.line} from={2 + copy.title.length} />
+          ) : (
+            copy.line.join(' ')
+          )}
+        </p>
+      ) : null}
+      {id === 'profile' ? <ProfileCard email={email} /> : null}
+      {id === 'settings' ? <SettingsCard email={email} /> : null}
+    </>
+  )
+}
+
+const watchNextSlots = ['01', '02', '03', '04'] as const
+
+function ExploreShelf() {
+  return (
+    <div className="shelf">
+      <h1 className="sr-only">Explore</h1>
+      <div className="shelf__top">
+        <article className="shelf-widget shelf-widget--continue glass">
+          <h2>Continue watching</h2>
+          <div className="shelf-frame">
+            <div className="shelf-progress" aria-hidden="true">
+              <span />
+            </div>
+          </div>
+        </article>
+        <article className="shelf-widget shelf-widget--trending glass">
+          <h2>Trending</h2>
+          <div className="shelf-frame" />
+        </article>
+      </div>
+      <section className="shelf-next" aria-labelledby="watch-next-title">
+        <h2 id="watch-next-title">Watch next</h2>
+        <ul className="film-row">
+          {watchNextSlots.map((slot) => (
+            <li key={slot}>
+              <article className="film-slot glass">
+                <div className="shelf-frame" />
+                <p className="film-slot__label">
+                  <span>Short film</span>
+                  <span>{slot}</span>
+                </p>
+              </article>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )
+}
+
+function ProfileCard({ email }: { email: string }) {
+  return (
+    <div className="account-card glass">
+      <span className="profile__avatar account-card__avatar" aria-hidden="true">
+        {initialsFromEmail(email)}
+      </span>
+      <p className="account-card__value">{email}</p>
+    </div>
+  )
+}
+
+function SettingsCard({ email }: { email: string }) {
+  return (
+    <div className="account-card glass">
+      <p className="account-card__label">Email</p>
+      <p className="account-card__value">{email}</p>
+      <p className="account-card__note">This sign-in uses your email and password.</p>
     </div>
   )
 }
 
 function ProfileMenu({
   email,
+  view,
+  onOpen,
   onSignOut,
 }: {
   email: string
+  view: DashView
+  onOpen: (next: DashView) => void
   onSignOut: () => void
 }) {
   const menuId = useId()
@@ -795,16 +985,20 @@ function ProfileMenu({
       </button>
       {open ? (
         <div className="profile__menu glass" id={menuId} role="menu" aria-label="Account">
-          {profileItems.map((item) => (
+          {accountMenu.map((item) => (
             <button
-              key={item}
+              key={item.id}
               type="button"
               role="menuitem"
               className="profile__item"
-              disabled
-              title="Coming soon"
+              aria-current={view === item.id ? 'page' : undefined}
+              onClick={() => {
+                onOpen(item.id)
+                setOpen(false)
+                triggerRef.current?.focus()
+              }}
             >
-              {item}
+              {item.label}
             </button>
           ))}
           <button
@@ -813,7 +1007,7 @@ function ProfileMenu({
             className="profile__item profile__item--out"
             onClick={onSignOut}
           >
-            Log out
+            Sign out
           </button>
         </div>
       ) : null}
